@@ -197,6 +197,34 @@ def generate_welding_area(panels_num=2, hpanels_num=1, vis=False):
     # return mesh, [labelbox, labelbox2, labelbox3]
     return pcd, mesh, labelboxes
 
+def generate_test_data(test_output_folder="/home/innovation/Projects/roboweldar-weld-seam-detection/seam-detection/welding_scenes_eval/", num=10):
+    for i in range(num):
+        print("Generating welding area no.", i, "...")
+        pcd, mesh, labelboxes = generate_welding_area(panels_num=np.random.randint(1, 3), hpanels_num=np.random.randint(1, 3), vis=False)
+        print(f'Exporting welding area...')
+        export2json(pcd, i, mesh, labelboxes, test_output_folder, export_mesh=False)
+
+
+def export2json(pcd, idx: int, mesh, labelboxes: [LabelBox], output_folder, export_mesh=True):
+    #--------mesh----------
+    if export_mesh:
+        o3d.io.write_triangle_mesh(os.path.join(output_folder,"gen_%04d.ply" % idx), mesh, compressed=True, write_vertex_colors=True)
+    o3d.io.write_point_cloud(os.path.join(output_folder, "%gen_04d.pcd" % idx), pcd)
+
+
+    data = {}
+
+    for i in range(len(labelboxes)):
+        data["figures"][i]["geometry"]["position"]["x"] = labelboxes[i].center[0]
+        data["figures"][i]["geometry"]["position"]["y"] = labelboxes[i].center[1]
+        data["figures"][i]["geometry"]["position"]["z"] = labelboxes[i].center[2]
+        data["figures"][i]["geometry"]["dimensions"]["x"] = labelboxes[i].size[0]
+        data["figures"][i]["geometry"]["dimensions"]["y"] = labelboxes[i].size[1]
+        data["figures"][i]["geometry"]["dimensions"]["z"] = labelboxes[i].size[2]
+        data["figures"][i]["geometry"]["rotation"]["z"] = labelboxes[i].heading_angle[0]
+
+    with open(os.path.join(output_folder,"gen_%04d.json" % idx), 'w') as fp:
+        json.dump(data, fp, indent=4)
 
 def export(pcd, idx: int, mesh, labelboxes: [LabelBox], output_folder, n_points, export_mesh=True):
     #--------mesh----------
@@ -225,7 +253,7 @@ def export(pcd, idx: int, mesh, labelboxes: [LabelBox], output_folder, n_points,
         obbs = np.zeros((0, 8))
     else:
         obbs = np.vstack(object_list)  # (K,8)
-        
+
     np.save(os.path.join(output_folder, '%04d_bbox.npy' % (idx)), obbs)
 
     #---------save votes----------
